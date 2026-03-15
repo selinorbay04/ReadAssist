@@ -17,6 +17,22 @@ export function parseResponse(res, field) {
   throw new Error('Unexpected response format');
 }
 
+export async function getUploadUrl(filename) {
+  const res = await API.get('/upload-url', { params: { filename } });
+  const uploadUrl = parseResponse(res, 'uploadUrl');
+  const s3Key = parseResponse(res, 's3Key');
+  return { uploadUrl, s3Key };
+}
+
+export async function uploadFileToS3(uploadUrl, file) {
+  const res = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/pdf' },
+    body: file,
+  });
+  if (!res.ok) throw new Error(`S3 upload failed: ${res.status}`);
+}
+
 export async function submitPdf(s3Key, filename) {
   const res = await API.post('/pdf', { s3Key, filename });
   return parseResponse(res, 'docId');
@@ -27,11 +43,7 @@ export async function getStatus(docId) {
   const status = parseResponse(res, 'status');
   let audioUrl = null;
   if (status === 'ready') {
-    try {
-      audioUrl = parseResponse(res, 'audio_url');
-    } catch {
-      // audio_url may not be present yet
-    }
+    try { audioUrl = parseResponse(res, 'audio_url'); } catch {}
   }
   return { status, audioUrl };
 }

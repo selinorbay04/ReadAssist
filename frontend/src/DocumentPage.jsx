@@ -51,7 +51,7 @@ function StatusPoller({ docId, onReady, onError }) {
 
 function AudioPlayer({ audioUrl }) {
   return (
-    <div className="audio-section">
+    <div className="audio-player-container">
       <h3 className="section-label">Audio Narration</h3>
       <div className="audio-card">
         <audio controls src={audioUrl} className="audio-element">
@@ -83,14 +83,12 @@ function SummarySection({ docId }) {
     }
   }, [docId]);
 
+  useEffect(() => {
+    fetchSummary();
+  }, [fetchSummary]);
+
   return (
     <div className="summary-section">
-      {!summary && !loading && (
-        <button className="btn btn-primary" onClick={fetchSummary} disabled={loading}>
-          Generate Summary
-        </button>
-      )}
-
       {loading && (
         <div className="loading-inline">
           <div className="spinner spinner--sm" />
@@ -213,26 +211,19 @@ function QASection({ docId }) {
   );
 }
 
-export default function DocumentPage({ docId, onReset }) {
+export default function DocumentPage({ docId, pdfUrl, onReset }) {
   const [ready, setReady] = useState(false);
   const [audioUrl, setAudioUrl] = useState(null);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('audio');
 
-  const handleReady = useCallback((url) => {
-    setAudioUrl(url);
+  const handleReady = useCallback((audio) => {
+    setAudioUrl(audio);
     setReady(true);
   }, []);
 
   const handleError = useCallback((msg) => {
     setError(msg);
   }, []);
-
-  const tabs = [
-    { id: 'audio', label: 'Audio' },
-    { id: 'summary', label: 'Summary' },
-    { id: 'qa', label: 'Q&A' },
-  ];
 
   return (
     <div className="document-page">
@@ -261,23 +252,35 @@ export default function DocumentPage({ docId, onReset }) {
 
       {ready && (
         <div className="doc-content fade-in">
-          <nav className="tab-bar">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                className={`tab ${activeTab === tab.id ? 'tab--active' : ''}`}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
+          <section className="reader-section">
+            <div className="pdf-viewer-container">
+              <h3 className="section-label">Document</h3>
+              <div className="pdf-viewer-card">
+                {pdfUrl ? (
+                  <iframe
+                    src={pdfUrl}
+                    className="pdf-iframe"
+                    title="PDF Document"
+                  />
+                ) : (
+                  <div className="pdf-unavailable">
+                    <p>PDF preview not available</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <AudioPlayer audioUrl={audioUrl} />
+          </section>
 
-          <div className="tab-panel">
-            {activeTab === 'audio' && <AudioPlayer audioUrl={audioUrl} />}
-            {activeTab === 'summary' && <SummarySection docId={docId} />}
-            {activeTab === 'qa' && <QASection docId={docId} />}
-          </div>
+          <section className="section-block">
+            <h3 className="section-label">Summary</h3>
+            <SummarySection docId={docId} />
+          </section>
+
+          <section className="section-block">
+            <h3 className="section-label">Ask Questions</h3>
+            <QASection docId={docId} />
+          </section>
         </div>
       )}
     </div>

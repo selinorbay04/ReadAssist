@@ -4,19 +4,23 @@ import DocumentPage from './DocumentPage';
 
 export default function App() {
   const [docId, setDocId] = useState(null);
+  const [pdfUrl, setPdfUrl] = useState(null);
 
-  const handleDocReady = useCallback((id) => {
+  const handleDocReady = useCallback((id, url) => {
     setDocId(id);
+    setPdfUrl(url);
   }, []);
 
   const handleReset = useCallback(() => {
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
     setDocId(null);
-  }, []);
+    setPdfUrl(null);
+  }, [pdfUrl]);
 
   return (
     <div className="app">
       {docId ? (
-        <DocumentPage docId={docId} onReset={handleReset} />
+        <DocumentPage docId={docId} pdfUrl={pdfUrl} onReset={handleReset} />
       ) : (
         <UploadPage onDocReady={handleDocReady} />
       )}

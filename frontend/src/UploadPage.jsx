@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { submitPdf } from './api';
+import { getUploadUrl, uploadFileToS3, submitPdf } from './api';
 
 export default function UploadPage({ onDocReady }) {
   const [dragging, setDragging] = useState(false);
@@ -17,12 +17,27 @@ export default function UploadPage({ onDocReady }) {
     setUploading(true);
 
     try {
-      const s3Key = `uploads/${Date.now()}-${file.name}`;
+      console.log('Step 1: Getting pre-signed URL for', file.name);
+      const { uploadUrl, s3Key } = await getUploadUrl(file.name);
+      console.log('Step 1 OK — s3Key:', s3Key, 'uploadUrl:', uploadUrl);
+
+      console.log('Step 2: Uploading file to S3...', { size: file.size, type: file.type });
+      await uploadFileToS3(uploadUrl, file);
+      console.log('Step 2 OK — file uploaded to S3');
+
+      console.log('Step 3: Calling POST /pdf with', { s3Key, filename: file.name });
       const docId = await submitPdf(s3Key, file.name);
-      onDocReady(docId);
+      console.log('Step 3 OK — docId:', docId);
+
+      const pdfUrl = URL.createObjectURL(file);
+      onDocReady(docId, pdfUrl);
     } catch (err) {
+      console.error('Upload failed:', err);
+      console.error('Response data:', err.response?.data);
+      console.error('Response status:', err.response?.status);
       setError(
         err.response?.data?.message ||
+        err.message ||
         'Something went wrong while processing your PDF. Please try again.'
       );
       setUploading(false);
